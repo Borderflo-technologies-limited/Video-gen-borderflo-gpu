@@ -1,9 +1,9 @@
 # Video Generation Service Dockerfile
-# Python 3.7 is required by some Wav2Lip dependency chains; use 3.7 base
-FROM python:3.7-slim as builder
+# Python 3.8 (bullseye) to keep Debian repos current while maintaining Wav2Lip compatibility
+FROM python:3.8-slim-bullseye as builder
 
 # Install system dependencies for building
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
     curl \
@@ -25,10 +25,10 @@ RUN pip install --no-cache-dir --upgrade pip==23.2.1 && \
       -r requirements.txt
 
 # Production stage
-FROM python:3.7-slim
+FROM python:3.8-slim-bullseye
 
 # Install runtime system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \
     libsm6 \
@@ -44,15 +44,15 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy Python packages from builder
-COPY --from=builder /usr/local/lib/python3.7/site-packages /usr/local/lib/python3.7/site-packages
+COPY --from=builder /usr/local/lib/python3.8/site-packages /usr/local/lib/python3.8/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY app/ ./app/
 COPY models/ ./models/
 
-# Clone Wav2Lip repository
-RUN git clone https://github.com/Rudrabha/Wav2Lip.git
+# Clone Wav2Lip repository (shallow)
+RUN git clone --depth 1 https://github.com/Rudrabha/Wav2Lip.git
 
 # Note: We intentionally avoid installing Wav2Lip/requirements.txt to prevent conflicts
 
