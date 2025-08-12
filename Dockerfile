@@ -24,6 +24,9 @@ RUN pip install --no-cache-dir --upgrade pip==23.2.1 && \
       --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org \
       -r requirements.txt
 
+# Clone Wav2Lip repository (shallow) in builder
+RUN git clone --depth 1 https://github.com/Rudrabha/Wav2Lip.git
+
 # Production stage
 FROM python:3.8-slim-bullseye
 
@@ -51,8 +54,8 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY app/ ./app/
 COPY models/ ./models/
 
-# Clone Wav2Lip repository (shallow)
-RUN git clone --depth 1 https://github.com/Rudrabha/Wav2Lip.git
+# Copy Wav2Lip from builder instead of cloning at runtime
+COPY --from=builder /app/Wav2Lip ./Wav2Lip
 
 # Note: We intentionally avoid installing Wav2Lip/requirements.txt to prevent conflicts
 
