@@ -27,6 +27,11 @@ RUN pip install --no-cache-dir --upgrade pip==23.2.1 && \
 # Clone Wav2Lip repository (shallow) in builder
 RUN git clone --depth 1 https://github.com/Rudrabha/Wav2Lip.git
 
+# Download Wav2Lip model during build
+RUN mkdir -p /app/models && \
+    curl -L -o /app/models/wav2lip_gan.pth \
+    "https://github.com/justinjohn0306/Wav2Lip/releases/download/models/wav2lip_gan.pth"
+
 # Production stage
 FROM python:3.8-slim-bullseye
 
