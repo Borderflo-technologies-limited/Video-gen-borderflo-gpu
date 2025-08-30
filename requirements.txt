@@ -5,6 +5,7 @@ flask-cors==3.0.10
 Werkzeug==2.2.3
 MarkupSafe==2.1.5
 Jinja2==3.1.4
+python-dotenv==0.19.2
 
 numpy==1.21.6
 opencv-python==4.5.5.64
