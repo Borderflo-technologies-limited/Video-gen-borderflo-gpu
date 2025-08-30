@@ -27,6 +27,9 @@ RUN pip install --no-cache-dir --upgrade pip==23.2.1 && \
 # Clone Wav2Lip repository (shallow) in builder
 RUN git clone --depth 1 https://github.com/Rudrabha/Wav2Lip.git
 
+# Install Wav2Lip requirements (this was missing!)
+RUN pip install --no-cache-dir -r Wav2Lip/requirements.txt
+
 # Download Wav2Lip model during build
 RUN mkdir -p /app/models && \
     curl -L -o /app/models/wav2lip_gan.pth \
