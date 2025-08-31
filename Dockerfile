@@ -95,19 +95,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     libgomp1 \
-    libffi7 \
-    libssl1.1 \
-    libjpeg62-turbo \
-    libpng16-16 \
-    libtiff5 \
-    libavcodec58 \
-    libavformat58 \
-    libswscale5 \
-    libv4l-0 \
-    libxvidcore4 \
-    libx264-155 \
-    libgtk-3-0 \
-    libatlas3-base \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
