@@ -15,6 +15,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxrender-dev \
     libgomp1 \
+    pkg-config \
+    libffi-dev \
+    libssl-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    libxvidcore-dev \
+    libx264-dev \
+    libgtk-3-dev \
+    libatlas-base-dev \
+    gfortran \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -42,9 +57,18 @@ RUN git clone --depth 1 https://github.com/Rudrabha/Wav2Lip.git || \
 
 # Install Wav2Lip requirements only if they exist and are valid
 RUN if [ -f "Wav2Lip/requirements.txt" ] && [ -s "Wav2Lip/requirements.txt" ]; then \
-        echo "Installing Wav2Lip requirements..." && \
-        pip install --no-cache-dir -r Wav2Lip/requirements.txt || \
-        echo "Wav2Lip requirements installation failed, continuing..."; \
+        echo "Installing Wav2Lip requirements with compatibility filtering..." && \
+        grep -v "opencv-python==" Wav2Lip/requirements.txt | \
+        grep -v "numpy==" | \
+        grep -v "librosa==" | \
+        sed 's/>=/==/g' | \
+        sed 's/<=/==/g' > Wav2Lip/requirements_filtered.txt && \
+        if [ -s "Wav2Lip/requirements_filtered.txt" ]; then \
+            pip install --no-cache-dir -r Wav2Lip/requirements_filtered.txt || \
+            echo "Filtered Wav2Lip requirements installation failed, continuing..."; \
+        else \
+            echo "No compatible Wav2Lip requirements found after filtering, skipping..."; \
+        fi; \
     else \
         echo "No valid Wav2Lip requirements found, skipping..."; \
     fi
@@ -70,6 +94,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-glx \
     curl \
     wget \
+    libgomp1 \
+    libffi7 \
+    libssl1.1 \
+    libjpeg62-turbo \
+    libpng16-16 \
+    libtiff5 \
+    libavcodec58 \
+    libavformat58 \
+    libswscale5 \
+    libv4l-0 \
+    libxvidcore4 \
+    libx264-155 \
+    libgtk-3-0 \
+    libatlas3-base \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
