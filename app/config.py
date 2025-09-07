@@ -28,20 +28,36 @@ class Settings:
     # Model Configuration
     MODEL_PATH: str = os.getenv("MODEL_PATH", "models/wav2lip_gan.pth")
     
-    # Device selection with better error handling
+    # Device selection with RunPod compatibility
     def _get_device():
-        device_env = os.getenv("DEVICE")
-        if device_env:
-            return device_env.lower()
+        device_env = os.getenv("DEVICE", "").lower()
         
+        # Force CPU if explicitly set
+        if device_env == "cpu":
+            return 'cpu'
+        
+        # Check for GPU availability
         if TORCH_AVAILABLE:
             try:
-                if torch.cuda.is_available():
-                    return 'cuda'
+                # Check if NVIDIA drivers are available
+                nvidia_visible = os.getenv("NVIDIA_VISIBLE_DEVICES")
+                if nvidia_visible and nvidia_visible != "none":
+                    if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+                        return 'cuda'
+                    else:
+                        # GPU environment detected but PyTorch can't access it
+                        # This often happens in RunPod - let's try CPU fallback
+                        import logging
+                        logging.warning("GPU environment detected but PyTorch CUDA not available. Using CPU.")
+                        return 'cpu'
                 else:
                     return 'cpu'
-            except Exception:
+            except Exception as e:
+                import logging
+                logging.warning(f"GPU detection failed: {e}. Using CPU.")
                 return 'cpu'
+        
+        # Default to CPU if torch not available
         return 'cpu'
     
     DEVICE: str = _get_device()

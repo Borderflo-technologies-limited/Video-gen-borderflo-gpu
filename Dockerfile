@@ -52,6 +52,10 @@ ENV DEVICE=cuda
 ENV LOG_LEVEL=INFO
 ENV DEBUG=false
 
+# RunPod GPU environment
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
 # Clone Wav2Lip repository (shallow) in builder with error handling
 RUN git clone --depth 1 https://github.com/Rudrabha/Wav2Lip.git || \
     (echo "Failed to clone Wav2Lip, trying alternative source..." && \
