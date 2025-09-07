@@ -178,6 +178,16 @@ class Wav2LipProcessor:
                 # Mock video generation
                 logger.info("Generating mock video (Wav2Lip not available)")
                 
+                # Get audio duration to determine video length
+                try:
+                    import librosa
+                    audio_data, sample_rate = librosa.load(audio_path, sr=None)
+                    audio_duration = len(audio_data) / sample_rate
+                    logger.info(f"Audio duration: {audio_duration:.2f} seconds")
+                except:
+                    audio_duration = 5.0  # Default 5 seconds if can't determine
+                    logger.warning("Could not determine audio duration, using 5 seconds")
+                
                 # Create a simple mock video
                 cap = cv2.VideoCapture(face_path) if face_path.endswith(('.mp4', '.avi')) else None
                 if cap:
@@ -194,12 +204,17 @@ class Wav2LipProcessor:
                 # Ensure output directory exists
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 
-                # Write a short mock video
+                # Calculate number of frames needed
+                fps = 25.0
+                num_frames = int(audio_duration * fps)
+                logger.info(f"Creating {num_frames} frames for {audio_duration:.2f}s video at {fps} FPS")
+                
+                # Write mock video
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                 logger.info(f"Creating mock video at: {output_path}")
                 logger.info(f"Frame shape: {frame.shape}")
                 
-                out = cv2.VideoWriter(output_path, fourcc, 25.0, (frame.shape[1], frame.shape[0]))
+                out = cv2.VideoWriter(output_path, fourcc, fps, (frame.shape[1], frame.shape[0]))
                 
                 if not out.isOpened():
                     logger.error(f"Failed to open video writer for {output_path}")
@@ -209,12 +224,27 @@ class Wav2LipProcessor:
                         "duration": time.time() - start_time
                     }
                 
-                # Write 25 frames (1 second)
-                for i in range(25):
-                    out.write(frame)
+                # Write frames with some variation
+                for i in range(num_frames):
+                    # Create a slightly different frame each time
+                    current_frame = frame.copy()
+                    
+                    # Add a moving element or color variation
+                    if i % 10 == 0:  # Every 10th frame
+                        # Add a subtle color shift
+                        current_frame = cv2.addWeighted(current_frame, 0.9, 
+                                                      np.ones_like(current_frame) * 10, 0.1, 0)
+                    
+                    # Add frame number for debugging
+                    cv2.putText(current_frame, f"Frame {i+1}/{num_frames}", 
+                               (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                    
+                    out.write(current_frame)
+                
                 out.release()
                 
                 logger.info(f"Mock video created successfully: {output_path}")
+                logger.info(f"Video duration: {audio_duration:.2f} seconds, {num_frames} frames")
                 
                 return {
                     "success": True,

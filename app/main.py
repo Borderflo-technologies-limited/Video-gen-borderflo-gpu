@@ -83,6 +83,10 @@ def create_default_face_image(output_path: str):
         cv2.ellipse(face_img, (width//2, eye_y + 100), (40, 20), 0, 0, 180,
                     (150, 100, 100), -1)
         
+        # Add some text to identify this as a default face
+        cv2.putText(face_img, "Default Face", (width//2 - 80, height - 30), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+        
         # Save the image
         cv2.imwrite(output_path, face_img)
         logger.info(f"Created default face image at {output_path}")
