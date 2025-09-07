@@ -4,6 +4,19 @@ A Flask-based service for generating lip-sync videos using Wav2Lip technology. T
 
 ## 🚀 Quick Start
 
+### Setup Default Video (Optional)
+For audio-only video generation, you can provide a default video file:
+
+```bash
+# Place your default video file in the models directory
+cp your_default_video.mp4 models/default_face.mp4
+
+# Or set a custom path via environment variable
+export DEFAULT_VIDEO_PATH="/path/to/your/default_video.mp4"
+```
+
+If no default video is provided, the service will automatically create a simple face image as fallback.
+
 ### Build and Run Container
 
 ```bash
@@ -34,6 +47,12 @@ curl http://localhost:8001/
 curl -X POST http://localhost:8001/generate-video \
   -F "audio_file=@/path/to/audio.wav" \
   -F "face_file=@/path/to/face.jpg" \
+  -F "session_id=test123" \
+  -F "question_id=q1"
+
+# 4. Generate Video (audio only - uses default face)
+curl -X POST http://localhost:8001/generate-video-audio-only \
+  -F "audio_file=@/path/to/audio.wav" \
   -F "session_id=test123" \
   -F "question_id=q1"
 ```
@@ -67,6 +86,7 @@ curl -X POST http://localhost:8001/generate-video \
   "endpoints": {
     "health": "/health",
     "generate": "/generate-video",
+    "generate_audio_only": "/generate-video-audio-only",
     "download": "/download/<filename>",
     "cleanup": "/cleanup/<task_id>"
   }
@@ -103,13 +123,43 @@ curl -X POST http://localhost:8001/generate-video \
 }
 ```
 
-### 4. Download Video
+### 4. Generate Video (Audio Only)
+- **URL**: `POST /generate-video-audio-only`
+- **Description**: Generate lip-sync video from audio only using a default video file or fallback face image
+- **Content-Type**: `multipart/form-data`
+- **Parameters**:
+  - `audio_file` (required): Audio file (WAV, MP3, MPEG)
+  - `session_id` (optional): Session identifier
+  - `question_id` (optional): Question identifier
+
+**Response (Success)**:
+```json
+{
+  "task_id": "uuid-12345",
+  "status": "completed",
+  "message": "Video generated successfully using default face/video",
+  "video_url": "/download/uuid-12345_output.mp4",
+  "duration": 15.5,
+  "session_id": "test123",
+  "question_id": "q1",
+  "face_type": "default_video"
+}
+```
+
+**Response (Error)**:
+```json
+{
+  "error": "audio_file is required"
+}
+```
+
+### 5. Download Video
 - **URL**: `GET /download/<filename>`
 - **Description**: Download generated video file
 - **Parameters**: `filename` - The filename returned from generate-video
 - **Response**: Video file (MP4)
 
-### 5. Cleanup Files
+### 6. Cleanup Files
 - **URL**: `DELETE /cleanup/<task_id>`
 - **Description**: Clean up temporary files for a specific task
 - **Parameters**: `task_id` - The task ID from generate-video
@@ -148,6 +198,11 @@ curl -X POST http://localhost:8001/generate-video \
   -F "audio_file=@test_audio.wav" \
   -F "face_file=@test_face.jpg" \
   -F "session_id=test123"
+
+# Generate video (audio only)
+curl -X POST http://localhost:8001/generate-video-audio-only \
+  -F "audio_file=@test_audio.wav" \
+  -F "session_id=test123"
 ```
 
 ### Download Test
@@ -171,9 +226,11 @@ curl -X DELETE http://localhost:8001/cleanup/task_id
 - `LOG_LEVEL`: Logging level (default: INFO)
 - `DEVICE`: Processing device (default: cuda, fallback: cpu)
 - `MODEL_PATH`: Path to Wav2Lip model (default: models/wav2lip_gan.pth)
+- `DEFAULT_VIDEO_PATH`: Path to default video for audio-only generation (default: models/default_face.mp4)
 
 ### Model Requirements
 - **Wav2Lip Model**: `wav2lip_gan.pth` in `models/` directory
+- **Default Video**: `default_face.mp4` in `models/` directory (for audio-only generation)
 - **Supported Audio**: WAV, MP3, MPEG
 - **Supported Images**: JPG, PNG
 - **Supported Videos**: MP4, AVI, MOV

@@ -108,6 +108,9 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY app/ ./app/
 COPY models/ ./models/
 
+# Create models directory if it doesn't exist
+RUN mkdir -p models
+
 # Copy Wav2Lip from builder instead of cloning at runtime
 COPY --from=builder /app/Wav2Lip ./Wav2Lip
 

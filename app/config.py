@@ -23,6 +23,9 @@ class Settings:
     MODEL_PATH: str = os.getenv("MODEL_PATH", "models/wav2lip_gan.pth")
     DEVICE: str = os.getenv("DEVICE", 'cuda' if os.getenv('CUDA_VISIBLE_DEVICES') else 'cpu')
     
+    # Default Video Configuration
+    DEFAULT_VIDEO_PATH: str = os.getenv("DEFAULT_VIDEO_PATH", "models/default_face.mp4")
+    
     # Processing Configuration
     IMG_SIZE: int = int(os.getenv("IMG_SIZE", "96"))  # 96 for fast, 288 for high quality
     WAV2LIP_BATCH_SIZE: int = int(os.getenv("WAV2LIP_BATCH_SIZE", "128"))

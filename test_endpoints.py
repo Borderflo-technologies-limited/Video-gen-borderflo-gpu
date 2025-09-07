@@ -134,6 +134,36 @@ def test_video_generation(audio_path, image_path):
         print(f"❌ Video Generation error: {e}")
         return None
 
+def test_audio_only_generation(audio_path):
+    """Test the audio-only video generation endpoint"""
+    print("\n🔍 Testing Audio-Only Video Generation...")
+    try:
+        with open(audio_path, 'rb') as audio_file:
+            files = {
+                'audio_file': ('test_audio.wav', audio_file, 'audio/wav')
+            }
+            data = {
+                'session_id': 'test_session_audio_only',
+                'question_id': 'test_question_audio_only'
+            }
+            
+            response = requests.post(f"{BASE_URL}/generate-video-audio-only", files=files, data=data)
+            
+            if response.status_code == 200:
+                result = response.json()
+                print(f"✅ Audio-Only Video Generation: {result['status']}")
+                print(f"   Task ID: {result['task_id']}")
+                print(f"   Video URL: {result['video_url']}")
+                print(f"   Face Type: {result.get('face_type', 'unknown')}")
+                return result['task_id']
+            else:
+                print(f"❌ Audio-Only Video Generation failed: {response.status_code}")
+                print(f"   Response: {response.text}")
+                return None
+    except Exception as e:
+        print(f"❌ Audio-Only Video Generation error: {e}")
+        return None
+
 def test_download(task_id):
     """Test the download endpoint"""
     print(f"\n🔍 Testing Download for task {task_id}...")
@@ -195,7 +225,7 @@ def main():
     
     # Run tests
     tests_passed = 0
-    total_tests = 5
+    total_tests = 6
     
     if test_health_check():
         tests_passed += 1
@@ -216,6 +246,11 @@ def main():
         
         if test_cleanup(task_id):
             tests_passed += 1
+    
+    # Test audio-only generation
+    audio_only_task_id = test_audio_only_generation(audio_path)
+    if audio_only_task_id:
+        tests_passed += 1
     
     # Summary
     print("\n" + "=" * 50)
