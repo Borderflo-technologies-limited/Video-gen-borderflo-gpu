@@ -1,6 +1,15 @@
 # Video Generation Service Dockerfile
-# Python 3.8 (bullseye) to keep Debian repos current while maintaining Wav2Lip compatibility
-FROM python:3.8-slim-bullseye as builder
+# Use CUDA-enabled base image for better RunPod compatibility
+FROM nvidia/cuda:11.3-devel-ubuntu20.04 as builder
+
+# Install Python 3.8
+RUN apt-get update && apt-get install -y \
+    python3.8 \
+    python3.8-dev \
+    python3.8-distutils \
+    python3-pip \
+    && ln -s /usr/bin/python3.8 /usr/bin/python \
+    && ln -s /usr/bin/pip3 /usr/bin/pip
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -89,8 +98,16 @@ RUN mkdir -p /app/models && \
      echo "Model download failed, will need to be downloaded at runtime") && \
     echo "Model download completed"
 
-# Production stage
-FROM python:3.8-slim-bullseye
+# Production stage  
+FROM nvidia/cuda:11.3-runtime-ubuntu20.04
+
+# Install Python 3.8
+RUN apt-get update && apt-get install -y \
+    python3.8 \
+    python3.8-distutils \
+    python3-pip \
+    && ln -s /usr/bin/python3.8 /usr/bin/python \
+    && ln -s /usr/bin/pip3 /usr/bin/pip
 
 # Install runtime system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
