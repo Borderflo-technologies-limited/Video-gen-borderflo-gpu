@@ -120,8 +120,12 @@ COPY models/ ./models/
 # Create models directory if it doesn't exist
 RUN mkdir -p models
 
-# Copy Wav2Lip model from builder
+# Copy Wav2Lip model from builder to both locations
 COPY --from=builder /app/models/wav2lip_gan.pth ./models/wav2lip_gan.pth
+
+# Create workspace directory structure for RunPod
+RUN mkdir -p /workspace/models /workspace/temp
+COPY --from=builder /app/models/wav2lip_gan.pth /workspace/models/wav2lip_gan.pth
 
 # Copy Wav2Lip from builder instead of cloning at runtime
 COPY --from=builder /app/Wav2Lip ./Wav2Lip
