@@ -1,15 +1,7 @@
 # Video Generation Service Dockerfile
-# Use CUDA-enabled base image for better RunPod compatibility
-FROM nvidia/cuda:11.3-devel-ubuntu20.04 as builder
+# Python 3.8 (bullseye) to keep Debian repos current while maintaining Wav2Lip compatibility
 
-# Install Python 3.8
-RUN apt-get update && apt-get install -y \
-    python3.8 \
-    python3.8-dev \
-    python3.8-distutils \
-    python3-pip \
-    && ln -s /usr/bin/python3.8 /usr/bin/python \
-    && ln -s /usr/bin/pip3 /usr/bin/pip
+FROM python:3.8-slim-bullseye as builder
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -64,6 +56,7 @@ ENV DEBUG=false
 # RunPod GPU environment
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+ENV NVIDIA_REQUIRE_CUDA="cuda>=11.3"
 
 # Clone Wav2Lip repository (shallow) in builder with error handling
 RUN git clone --depth 1 https://github.com/Rudrabha/Wav2Lip.git || \
@@ -98,16 +91,8 @@ RUN mkdir -p /app/models && \
      echo "Model download failed, will need to be downloaded at runtime") && \
     echo "Model download completed"
 
-# Production stage  
-FROM nvidia/cuda:11.3-runtime-ubuntu20.04
-
-# Install Python 3.8
-RUN apt-get update && apt-get install -y \
-    python3.8 \
-    python3.8-distutils \
-    python3-pip \
-    && ln -s /usr/bin/python3.8 /usr/bin/python \
-    && ln -s /usr/bin/pip3 /usr/bin/pip
+# Production stage
+FROM python:3.8-slim-bullseye
 
 # Install runtime system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -126,6 +111,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set working directory
 WORKDIR /app
 
+# Set GPU environment variables for RunPod
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+ENV NVIDIA_REQUIRE_CUDA="cuda>=11.3"
+ENV DEVICE=cuda
+ENV CUDA_VISIBLE_DEVICES=0
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+
 # Copy Python packages from builder
 COPY --from=builder /usr/local/lib/python3.8/site-packages /usr/local/lib/python3.8/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
@@ -133,6 +126,8 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY app/ ./app/
 COPY models/ ./models/
+COPY debug_gpu.py ./
+COPY start_runpod.sh ./
 
 # Create models directory if it doesn't exist
 RUN mkdir -p models
@@ -152,6 +147,9 @@ COPY --from=builder /app/Wav2Lip ./Wav2Lip
 # Create temp directory
 RUN mkdir -p temp
 
+# Make startup script executable
+RUN chmod +x start_runpod.sh
+
 # Create environment file template
 COPY env.example .env
 
@@ -162,5 +160,5 @@ EXPOSE 8001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget -qO- http://localhost:8001/health || exit 1
 
-# Run the Flask application
-CMD ["python", "app/main.py"]
+# Run the Flask application with GPU diagnostics
+CMD ["./start_runpod.sh"]
