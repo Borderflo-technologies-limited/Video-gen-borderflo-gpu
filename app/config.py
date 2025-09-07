@@ -32,7 +32,7 @@ class Settings:
     FPS: float = float(os.getenv("FPS", "25.0"))
     
     # File Storage
-    TEMP_DIR: str = os.getenv("TEMP_DIR", "temp")
+    TEMP_DIR: str = os.path.abspath(os.getenv("TEMP_DIR", "temp"))
     MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", str(100 * 1024 * 1024)))  # 100MB
     ALLOWED_AUDIO_TYPES: list = ["audio/wav", "audio/mp3", "audio/mpeg"]
     ALLOWED_IMAGE_TYPES: list = ["image/jpeg", "image/jpg", "image/png"]

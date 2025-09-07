@@ -289,9 +289,22 @@ def generate_video_audio_only():
                 create_default_face_image(default_face_path)
         
         # Generate video using default face/video
+        logger.info(f"Generating video with face: {default_face_path}")
+        logger.info(f"Output path: {output_path}")
         result = processor.generate_video(default_face_path, temp_audio_path, output_path)
         
+        # Verify file was created
         if result["success"]:
+            if os.path.exists(output_path):
+                logger.info(f"Video file created successfully: {output_path}")
+            else:
+                logger.error(f"Video generation reported success but file not found: {output_path}")
+                return jsonify({
+                    "task_id": task_id,
+                    "status": "failed",
+                    "error": "Video file was not created"
+                }), 500
+            
             # Schedule cleanup in background thread
             cleanup_thread = threading.Thread(
                 target=cleanup_task_files,
@@ -326,8 +339,11 @@ def download_file(filename):
     """Download generated video file"""
     try:
         file_path = os.path.join(settings.TEMP_DIR, filename)
+        logger.info(f"Looking for file at: {file_path}")
+        logger.info(f"TEMP_DIR: {settings.TEMP_DIR}")
         
         if not os.path.exists(file_path):
+            logger.error(f"File not found: {file_path}")
             abort(404, description="File not found")
         
         return send_file(

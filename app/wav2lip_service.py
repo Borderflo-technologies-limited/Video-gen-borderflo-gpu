@@ -191,14 +191,30 @@ class Wav2LipProcessor:
                     frame = np.zeros((480, 640, 3), dtype=np.uint8)
                     cv2.putText(frame, "Mock Video", (200, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 
+                # Ensure output directory exists
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                
                 # Write a short mock video
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                logger.info(f"Creating mock video at: {output_path}")
+                logger.info(f"Frame shape: {frame.shape}")
+                
                 out = cv2.VideoWriter(output_path, fourcc, 25.0, (frame.shape[1], frame.shape[0]))
                 
+                if not out.isOpened():
+                    logger.error(f"Failed to open video writer for {output_path}")
+                    return {
+                        "success": False,
+                        "error": "Failed to create video file",
+                        "duration": time.time() - start_time
+                    }
+                
                 # Write 25 frames (1 second)
-                for _ in range(25):
+                for i in range(25):
                     out.write(frame)
                 out.release()
+                
+                logger.info(f"Mock video created successfully: {output_path}")
                 
                 return {
                     "success": True,
@@ -229,17 +245,29 @@ class Wav2LipProcessor:
             
             logger.info("Generating video with Wav2Lip model")
             
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
             # Create output video
             fps = 25
             frame_h, frame_w = frames[0].shape[:2]
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             out = cv2.VideoWriter(output_path, fourcc, fps, (frame_w, frame_h))
             
+            if not out.isOpened():
+                logger.error(f"Failed to open video writer for {output_path}")
+                return {
+                    "success": False,
+                    "error": "Failed to create video file",
+                    "duration": time.time() - start_time
+                }
+            
             # Write frames (simplified version)
             for frame in frames:
                 out.write(frame)
             
             out.release()
+            logger.info(f"Video created successfully: {output_path}")
             
             duration = time.time() - start_time
             file_size = os.path.getsize(output_path)
