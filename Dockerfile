@@ -116,6 +116,9 @@ COPY models/ ./models/
 # Create models directory if it doesn't exist
 RUN mkdir -p models
 
+# Copy Wav2Lip model from builder
+COPY --from=builder /app/models/wav2lip_gan.pth ./models/wav2lip_gan.pth
+
 # Copy Wav2Lip from builder instead of cloning at runtime
 COPY --from=builder /app/Wav2Lip ./Wav2Lip
 

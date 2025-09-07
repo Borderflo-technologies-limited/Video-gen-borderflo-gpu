@@ -27,8 +27,24 @@ class Settings:
     
     # Model Configuration
     MODEL_PATH: str = os.getenv("MODEL_PATH", "models/wav2lip_gan.pth")
-    # Default to CUDA for production (RunPod), fallback to CPU
-    DEVICE: str = os.getenv("DEVICE", 'cuda' if TORCH_AVAILABLE and torch.cuda.is_available() else 'cpu')
+    
+    # Device selection with better error handling
+    def _get_device():
+        device_env = os.getenv("DEVICE")
+        if device_env:
+            return device_env.lower()
+        
+        if TORCH_AVAILABLE:
+            try:
+                if torch.cuda.is_available():
+                    return 'cuda'
+                else:
+                    return 'cpu'
+            except Exception:
+                return 'cpu'
+        return 'cpu'
+    
+    DEVICE: str = _get_device()
     
     # Default Video Configuration
     DEFAULT_VIDEO_PATH: str = os.getenv("DEFAULT_VIDEO_PATH", "models/default_face.mp4")

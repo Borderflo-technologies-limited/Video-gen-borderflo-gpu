@@ -21,11 +21,26 @@ If no default video is provided, the service will automatically create a simple 
 
 ### Build and Run Container
 
+#### For RunPod (Production)
 ```bash
 # Build the Docker image
 docker build -t visa-ai-video-generation:latest .
 
-# Run the container
+# Run with GPU support on RunPod
+docker run -d --name video-gen-prod \
+  -p 8001:8001 \
+  --gpus all \
+  -e HOST=0.0.0.0 \
+  -e PORT=8001 \
+  -e DEVICE=cuda \
+  -e LOG_LEVEL=INFO \
+  -e DEBUG=false \
+  visa-ai-video-generation:latest
+```
+
+#### For Local Testing (CPU)
+```bash
+# Run without GPU for local development
 docker run -d --name video-gen-test \
   -p 8001:8001 \
   -e HOST=0.0.0.0 \

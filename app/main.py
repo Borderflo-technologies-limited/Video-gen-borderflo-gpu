@@ -38,14 +38,34 @@ def initialize_processor():
     """Initialize the Wav2Lip processor"""
     global processor
     try:
-        logger.info("Initializing Wav2Lip processor...")
-        processor = Wav2LipProcessor(settings.MODEL_PATH, settings.DEVICE)
-        processor.load_model()
-        logger.info("Video Generation Service started successfully")
+        logger.info("🚀 Initializing Video Generation Service...")
         logger.info(f"Device: {settings.DEVICE}")
         logger.info(f"Model path: {settings.MODEL_PATH}")
+        
+        # Check if model file exists
+        if os.path.exists(settings.MODEL_PATH):
+            size_mb = os.path.getsize(settings.MODEL_PATH) / (1024 * 1024)
+            logger.info(f"✅ Model file found: {size_mb:.1f} MB")
+        else:
+            logger.error(f"❌ Model file missing: {settings.MODEL_PATH}")
+        
+        # Check CUDA availability
+        try:
+            import torch
+            if torch.cuda.is_available():
+                gpu_count = torch.cuda.device_count()
+                gpu_name = torch.cuda.get_device_name(0) if gpu_count > 0 else "Unknown"
+                logger.info(f"✅ CUDA available: {gpu_count} GPU(s) - {gpu_name}")
+            else:
+                logger.warning("⚠️ CUDA not available, using CPU")
+        except Exception as e:
+            logger.warning(f"⚠️ CUDA check failed: {e}")
+        
+        processor = Wav2LipProcessor(settings.MODEL_PATH, settings.DEVICE)
+        processor.load_model()
+        logger.info("✅ Video Generation Service started successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize processor: {e}")
+        logger.error(f"❌ Failed to initialize processor: {e}")
         # Continue anyway, processor will work in mock mode
 
 # Initialize processor on startup
