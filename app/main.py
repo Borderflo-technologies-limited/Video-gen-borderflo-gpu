@@ -101,12 +101,17 @@ def create_default_face_image(output_path: str):
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    from wav2lip_service import WAV2LIP_AVAILABLE
+    
     return jsonify({
         "status": "healthy",
         "service": "video-generation",
         "device": settings.DEVICE,
         "model_path": settings.MODEL_PATH,
-        "model_loaded": processor is not None and processor.model is not None
+        "model_loaded": processor is not None and processor.model is not None,
+        "wav2lip_available": WAV2LIP_AVAILABLE,
+        "mode": "PRODUCTION" if WAV2LIP_AVAILABLE else "MOCK",
+        "gpu_available": settings.DEVICE == "cuda"
     })
 
 @app.route('/', methods=['GET'])

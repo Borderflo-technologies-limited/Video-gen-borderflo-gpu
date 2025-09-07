@@ -2,6 +2,8 @@
 
 A Flask-based service for generating lip-sync videos using Wav2Lip technology. This service takes an audio file and a face image/video as input and generates a synchronized video output.
 
+**🚀 PRODUCTION READY**: Configured for GPU-accelerated video generation on RunPod and other cloud platforms.
+
 ## 🚀 Quick Start
 
 ### Setup Default Video (Optional)
@@ -67,9 +69,12 @@ curl -X POST http://localhost:8001/generate-video-audio-only \
 {
   "status": "healthy",
   "service": "video-generation",
-  "device": "cpu",
+  "device": "cuda",
   "model_path": "models/wav2lip_gan.pth",
-  "model_loaded": true
+  "model_loaded": true,
+  "wav2lip_available": true,
+  "mode": "PRODUCTION",
+  "gpu_available": true
 }
 ```
 

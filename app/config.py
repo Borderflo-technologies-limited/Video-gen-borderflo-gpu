@@ -7,6 +7,12 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -21,7 +27,8 @@ class Settings:
     
     # Model Configuration
     MODEL_PATH: str = os.getenv("MODEL_PATH", "models/wav2lip_gan.pth")
-    DEVICE: str = os.getenv("DEVICE", 'cuda' if os.getenv('CUDA_VISIBLE_DEVICES') else 'cpu')
+    # Default to CUDA for production (RunPod), fallback to CPU
+    DEVICE: str = os.getenv("DEVICE", 'cuda' if TORCH_AVAILABLE and torch.cuda.is_available() else 'cpu')
     
     # Default Video Configuration
     DEFAULT_VIDEO_PATH: str = os.getenv("DEFAULT_VIDEO_PATH", "models/default_face.mp4")

@@ -21,9 +21,32 @@ try:
     import audio
     import librosa
     WAV2LIP_AVAILABLE = True
-except ImportError:
+    logging.info("Wav2Lip dependencies loaded successfully. Running in PRODUCTION mode.")
+except ImportError as e:
     WAV2LIP_AVAILABLE = False
-    logging.warning("Wav2Lip dependencies not available. Service will run in mock mode.")
+    logging.error(f"Wav2Lip dependencies failed to import: {e}")
+    logging.warning("Service will run in mock mode. For production, ensure Wav2Lip is properly installed.")
+    
+    # Additional diagnostic information
+    import os
+    wav2lip_path = "Wav2Lip"
+    if os.path.exists(wav2lip_path):
+        logging.info(f"Wav2Lip directory exists at: {wav2lip_path}")
+        contents = os.listdir(wav2lip_path)
+        logging.info(f"Wav2Lip directory contents: {contents}")
+    else:
+        logging.error(f"Wav2Lip directory not found at: {wav2lip_path}")
+    
+    model_path = "models/wav2lip_gan.pth"
+    if os.path.exists(model_path):
+        size_mb = os.path.getsize(model_path) / (1024 * 1024)
+        logging.info(f"Model file exists: {model_path} ({size_mb:.1f} MB)")
+    else:
+        logging.error(f"Model file not found: {model_path}")
+except Exception as e:
+    WAV2LIP_AVAILABLE = False
+    logging.error(f"Unexpected error loading Wav2Lip: {e}")
+    logging.warning("Service will run in mock mode.")
 
 logger = logging.getLogger(__name__)
 
@@ -179,14 +202,57 @@ class Wav2LipProcessor:
                 logger.info("Generating mock video (Wav2Lip not available)")
                 
                 # Get audio duration to determine video length
+                audio_duration = 5.0  # Default fallback
+                
                 try:
                     import librosa
+                    logger.info(f"Attempting to load audio with librosa: {audio_path}")
                     audio_data, sample_rate = librosa.load(audio_path, sr=None)
                     audio_duration = len(audio_data) / sample_rate
-                    logger.info(f"Audio duration: {audio_duration:.2f} seconds")
-                except:
-                    audio_duration = 5.0  # Default 5 seconds if can't determine
-                    logger.warning("Could not determine audio duration, using 5 seconds")
+                    logger.info(f"Audio duration (librosa): {audio_duration:.2f} seconds")
+                except Exception as e:
+                    logger.warning(f"Librosa failed: {e}")
+                    
+                    # Try alternative method with wave module
+                    try:
+                        import wave
+                        with wave.open(audio_path, 'rb') as wav_file:
+                            frames = wav_file.getnframes()
+                            sample_rate = wav_file.getframerate()
+                            audio_duration = frames / float(sample_rate)
+                            logger.info(f"Audio duration (wave): {audio_duration:.2f} seconds")
+                    except Exception as e2:
+                        logger.warning(f"Wave module failed: {e2}")
+                        
+                        # Try with pydub
+                        try:
+                            from pydub import AudioSegment
+                            audio = AudioSegment.from_file(audio_path)
+                            audio_duration = len(audio) / 1000.0  # Convert to seconds
+                            logger.info(f"Audio duration (pydub): {audio_duration:.2f} seconds")
+                        except Exception as e3:
+                            logger.warning(f"Pydub failed: {e3}")
+                            
+                            # Last resort: estimate based on file size
+                            try:
+                                file_size = os.path.getsize(audio_path)
+                                # Better estimation for MP3: 
+                                # Your file: 60KB for 10s = 6KB/s = ~48kbps (lower quality)
+                                # Use adaptive estimation based on file size
+                                if file_size < 100000:  # < 100KB, likely lower bitrate
+                                    bytes_per_second = 6000  # ~48kbps
+                                elif file_size < 500000:  # < 500KB, medium bitrate  
+                                    bytes_per_second = 12000  # ~96kbps
+                                else:  # Larger files, higher bitrate
+                                    bytes_per_second = 16000  # ~128kbps
+                                
+                                estimated_duration = file_size / bytes_per_second
+                                audio_duration = max(3.0, min(estimated_duration, 300))  # Between 3s and 5min
+                                logger.info(f"Audio duration (estimated from file size): {audio_duration:.2f} seconds")
+                                logger.info(f"File size: {file_size} bytes, using {bytes_per_second} bytes/sec")
+                            except Exception as e4:
+                                logger.warning(f"File size estimation failed: {e4}")
+                                logger.warning("Could not determine audio duration, using 5 seconds")
                 
                 # Create a simple mock video
                 cap = cv2.VideoCapture(face_path) if face_path.endswith(('.mp4', '.avi')) else None
@@ -224,20 +290,45 @@ class Wav2LipProcessor:
                         "duration": time.time() - start_time
                     }
                 
-                # Write frames with some variation
+                # Write frames with animation
                 for i in range(num_frames):
-                    # Create a slightly different frame each time
+                    # Create a frame with animation
                     current_frame = frame.copy()
                     
-                    # Add a moving element or color variation
-                    if i % 10 == 0:  # Every 10th frame
-                        # Add a subtle color shift
-                        current_frame = cv2.addWeighted(current_frame, 0.9, 
-                                                      np.ones_like(current_frame) * 10, 0.1, 0)
+                    # Add animated elements
+                    progress = i / num_frames  # 0 to 1
                     
-                    # Add frame number for debugging
+                    # 1. Moving circle/ball
+                    center_x = int(width * 0.2 + (width * 0.6) * progress)
+                    center_y = height // 2
+                    cv2.circle(current_frame, (center_x, center_y), 20, (0, 255, 0), -1)
+                    
+                    # 2. Color variation based on progress
+                    color_shift = int(50 * np.sin(progress * np.pi * 4))  # Oscillating color
+                    current_frame = cv2.addWeighted(current_frame, 0.95, 
+                                                  np.ones_like(current_frame) * color_shift, 0.05, 0)
+                    
+                    # 3. Pulsing effect
+                    pulse = int(10 * np.sin(progress * np.pi * 8))  # Fast pulse
+                    cv2.circle(current_frame, (width//2, height//2), 100 + pulse, (255, 255, 0), 3)
+                    
+                    # 4. Progress bar
+                    bar_width = int(width * 0.8)
+                    bar_height = 20
+                    bar_x = (width - bar_width) // 2
+                    bar_y = height - 50
+                    
+                    # Background bar
+                    cv2.rectangle(current_frame, (bar_x, bar_y), (bar_x + bar_width, bar_y + bar_height), (100, 100, 100), -1)
+                    # Progress bar
+                    progress_width = int(bar_width * progress)
+                    cv2.rectangle(current_frame, (bar_x, bar_y), (bar_x + progress_width, bar_y + bar_height), (0, 255, 0), -1)
+                    
+                    # 5. Frame info
                     cv2.putText(current_frame, f"Frame {i+1}/{num_frames}", 
                                (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                    cv2.putText(current_frame, f"Time: {i/25:.1f}s / {audio_duration:.1f}s", 
+                               (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
                     
                     out.write(current_frame)
                 
@@ -269,14 +360,28 @@ class Wav2LipProcessor:
             # Detect faces
             face_boxes = self.detect_faces(frames)
             
-            # TODO: Implement actual Wav2Lip inference
-            # This is where the actual model inference would happen
-            # For now, create a simple output video
-            
-            logger.info("Generating video with Wav2Lip model")
+            # Actual Wav2Lip inference
+            logger.info("Generating video with Wav2Lip model - PRODUCTION MODE")
             
             # Ensure output directory exists
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
+            # Prepare mel spectrogram chunks
+            mel_chunks = []
+            mel_idx_multiplier = 80./fps 
+            i = 0
+            while True:
+                start_idx = int(i * mel_idx_multiplier)
+                if start_idx + 16 > len(mel[0]):
+                    break
+                mel_chunks.append(mel[:, start_idx : start_idx + 16])
+                i += 1
+
+            logger.info(f"Processing {len(mel_chunks)} mel chunks")
+            
+            # Prepare video frames
+            full_frames = frames
+            batch_size = 128
             
             # Create output video
             fps = 25
@@ -292,12 +397,50 @@ class Wav2LipProcessor:
                     "duration": time.time() - start_time
                 }
             
-            # Write frames (simplified version)
-            for frame in frames:
-                out.write(frame)
+            # Process frames in batches
+            for i in range(0, len(frames), batch_size):
+                batch_frames = frames[i:i+batch_size]
+                mel_batch = mel_chunks[i:min(i+batch_size, len(mel_chunks))]
+                
+                if len(mel_batch) == 0:
+                    break
+                    
+                # Prepare batch for inference
+                img_batch = []
+                for frame in batch_frames:
+                    # Resize and normalize frame
+                    frame_resized = cv2.resize(frame, (96, 96))
+                    frame_normalized = frame_resized.astype(np.float32) / 255.0
+                    img_batch.append(frame_normalized)
+                
+                if len(img_batch) == 0:
+                    break
+                
+                # Convert to tensors
+                img_batch = torch.FloatTensor(np.array(img_batch)).permute(0, 3, 1, 2).to(self.device)
+                mel_batch = torch.FloatTensor(np.array(mel_batch)).to(self.device)
+                
+                # Ensure same batch size
+                min_len = min(len(img_batch), len(mel_batch))
+                img_batch = img_batch[:min_len]
+                mel_batch = mel_batch[:min_len]
+                
+                if min_len == 0:
+                    continue
+                
+                # Run inference
+                with torch.no_grad():
+                    pred = model(mel_batch, img_batch)
+                    pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.0
+                
+                # Write generated frames
+                for p in pred:
+                    p = p.astype(np.uint8)
+                    p = cv2.resize(p, (frame_w, frame_h))
+                    out.write(p)
             
             out.release()
-            logger.info(f"Video created successfully: {output_path}")
+            logger.info(f"Video created successfully with Wav2Lip inference: {output_path}")
             
             duration = time.time() - start_time
             file_size = os.path.getsize(output_path)

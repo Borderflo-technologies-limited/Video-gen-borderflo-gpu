@@ -47,6 +47,11 @@ RUN pip install --no-cache-dir --upgrade pip==23.2.1 && \
       --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org \
       -r requirements.txt
 
+# Set production environment variables
+ENV DEVICE=cuda
+ENV LOG_LEVEL=INFO
+ENV DEBUG=false
+
 # Clone Wav2Lip repository (shallow) in builder with error handling
 RUN git clone --depth 1 https://github.com/Rudrabha/Wav2Lip.git || \
     (echo "Failed to clone Wav2Lip, trying alternative source..." && \
